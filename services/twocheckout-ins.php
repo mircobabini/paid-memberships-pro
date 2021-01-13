@@ -392,7 +392,14 @@
 		//create a blank order for the email
 		$morder = new MemberOrder();
 		$morder->user_id = $last_order->user_id;
+		$morder->membership_level = $last_order->membership_level;
 
+		$user = get_userdata($morder->user_id);
+		if(empty($user))
+			return false;
+
+		$user->membership_level = $morder->membership_level; // make sure they have the right level info
+		
 		// Email the user and ask them to update their credit card information
 		$pmproemail = new PMProEmail();
 		$pmproemail->sendBillingFailureEmail($user, $morder);
