@@ -743,7 +743,17 @@
 			$this->httpParsedResponseAr = $this->PPHttpPost('CreateRecurringPaymentsProfile', $nvpStr);
 
 			if("SUCCESS" == strtoupper($this->httpParsedResponseAr["ACK"]) || "SUCCESSWITHWARNING" == strtoupper($this->httpParsedResponseAr["ACK"])) {
-				$order->status = "success";
+				// PayPal docs says that PROFILESTATUS may be:
+				// 1. ActiveProfile — The recurring payment profile has been successfully created and activated for scheduled payments according the billing instructions from the recurring payments profile.
+				// 2. PendingProfile — The system is in the process of creating the recurring payment profile. Please check your IPN messages for an update.
+				if(isset($this->httpParsedResponseAr["PROFILESTATUS"]) && "ACTIVEPROFILE" == strtoupper($this->httpParsedResponseAr["PROFILESTATUS"])) {
+					$order->status = "success";
+				} else {
+					// We have seen that when PROFILESTATUS is missing, the order is errored
+					$order->status = "error";
+				}
+				
+				// this is wrong. but still looking for a way to obtain the TRANSACTIONID, which is missing.
 				$order->payment_transaction_id = urldecode($this->httpParsedResponseAr['PROFILEID']);
 				$order->subscription_transaction_id = urldecode($this->httpParsedResponseAr['PROFILEID']);
 
