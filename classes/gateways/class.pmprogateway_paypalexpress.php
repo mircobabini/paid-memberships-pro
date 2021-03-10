@@ -743,14 +743,43 @@
 			$this->httpParsedResponseAr = $this->PPHttpPost('CreateRecurringPaymentsProfile', $nvpStr);
 
 			if("SUCCESS" == strtoupper($this->httpParsedResponseAr["ACK"]) || "SUCCESSWITHWARNING" == strtoupper($this->httpParsedResponseAr["ACK"])) {
-				$order->status = "success";
-				$order->payment_transaction_id = urldecode($this->httpParsedResponseAr['PROFILEID']);
-				$order->subscription_transaction_id = urldecode($this->httpParsedResponseAr['PROFILEID']);
+				// PayPal docs says that PROFILESTATUS can be:
+				// 1. ActiveProfile — The recurring payment profile has been successfully created and activated for scheduled payments according the billing instructions from the recurring payments profile.
+				// 2. PendingProfile — The system is in the process of creating the recurring payment profile. Please check your IPN messages for an update.
+				// Also, we have seen that PROFILESTATUS can be missing. That case would be an error.
+				if(isset($this->httpParsedResponseAr["PROFILESTATUS"]) && in_array($this->httpParsedResponseAr["PROFILESTATUS"], ["ActiveProfile", "PendingProfile"])) {
+					$order->status = "success";
 
-				//update order
-				$order->saveOrder();
+					// this is wrong, but we don't know the real transaction id at this point
+					$order->payment_transaction_id = urldecode($this->httpParsedResponseAr['PROFILEID']);
+					$order->subscription_transaction_id = urldecode($this->httpParsedResponseAr['PROFILEID']);
 
-				return true;
+					//update order
+					$order->saveOrder();
+
+					return true;
+				} else {
+					// stop processing the review request on checkout page
+					$pmpro_review = false;
+
+					$order->status = "error";
+
+					// this is wrong, but we don't know the real transaction id at this point
+					$order->payment_transaction_id = urldecode($this->httpParsedResponseAr['PROFILEID']);
+					$order->subscription_transaction_id = urldecode($this->httpParsedResponseAr['PROFILEID']);
+
+					//update order
+					$order->saveOrder();
+
+					$order->errorcode = '';
+					$order->error = __( 'Something went wrong creating plan with PayPal; missing PROFILESTATUS.', 'paid-memberships-pro' );
+					$order->shorterror = __( 'Error creating plan with PayPal.', 'paid-memberships-pro' );
+
+					//update order
+					$order->saveOrder();
+
+					return false;
+				}
 			} else  {
 				$order->status = "error";
 				$order->errorcode = $this->httpParsedResponseAr['L_ERRORCODE0'];
