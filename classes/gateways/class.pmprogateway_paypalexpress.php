@@ -787,14 +787,43 @@
 					return false;
 				}
 			} else  {
-				// stop processing the review request on checkout page
-				$pmpro_review = false;
+				switch ( intval( $this->httpParsedResponseAr['L_ERRORCODE0'] ) ) {
+					// https://developer.paypal.com/docs/nvp-soap-api/errors/#11456
+					case 11456:
+						// PAYMENTSTATUS values are listed here:
+						// https://developer.paypal.com/docs/nvp-soap-api/get-transaction-details-nvp/
+						$transaction_status = $order->getGatewayTransactionStatus();
 
-				$order->errorcode = $this->httpParsedResponseAr['L_ERRORCODE0'];
-				$order->error = urldecode($this->httpParsedResponseAr['L_LONGMESSAGE0']);
-				$order->shorterror = urldecode($this->httpParsedResponseAr['L_SHORTMESSAGE0']);
+						switch ( $transaction_status ) {
+							case 'Completed':
+								$order->status = "success";
 
-				return false;
+								//update order
+								$order->saveOrder();
+
+								return true;
+
+							case '':
+							default:
+								$pmpro_review  = false;
+								$order->status = "error";
+
+								//update order
+								$order->saveOrder();
+
+								return false;
+						}
+
+					default:
+						// stop processing the review request on checkout page
+						$pmpro_review = false;
+
+						$order->errorcode  = $this->httpParsedResponseAr['L_ERRORCODE0'];
+						$order->error      = urldecode( $this->httpParsedResponseAr['L_LONGMESSAGE0'] );
+						$order->shorterror = urldecode( $this->httpParsedResponseAr['L_SHORTMESSAGE0'] );
+
+						return false;
+				}
 			}
 		}
 
