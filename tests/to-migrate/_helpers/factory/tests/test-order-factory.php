@@ -40,10 +40,10 @@ class Order_Factory_Test extends Base {
      * @dataProvider data_create
      */
     function test_create( $args ) {
-        $checkout = $this->factory->order->create( $args );
-        $this->assertInstanceOf( \MemberOrder::class, $checkout );
+        $order = $this->factory->order->create( $args );
+        $this->assertInstanceOf( \MemberOrder::class, $order );
         foreach ( $args as $key => $value ) {
-            $this->assertEquals( $args[$key], $checkout->$key );
+            $this->assertEquals( $args[$key], $order->$key );
         }
     }
     
