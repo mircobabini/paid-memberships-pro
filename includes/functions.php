@@ -171,6 +171,36 @@ function pmpro_url( $page = null, $querystring = '', $scheme = null ) {
 	return $url;
 }
 
+/**
+ * @param string[] $pages
+ *
+ * @return bool
+ * 
+ * @since TBD
+ */
+function pmpro_is_page( $pages ) {
+	global $pmpro_pages;
+
+	if ( ! is_array( $pages ) ) {
+		$pages = (array) $pages;
+	}
+
+	$result = false;
+	foreach ( $pages as $page ) {
+		if ( ! empty( $pmpro_pages[ $page ] ) && is_page( $pmpro_pages[ $page ] ) && 'publish' === get_post_status( $pmpro_pages[ $page ] ) ) {
+			$result = true;
+			break;
+		}
+	}
+
+	/**
+	 * Filter the result before returning.
+	 */
+	$result = apply_filters( 'pmpro_is_page', $result, $pages );
+
+	return $result;
+}
+
 function pmpro_isLevelFree( &$level ) {
 	if ( ! empty( $level ) && $level->initial_payment <= 0 && $level->billing_amount <= 0 && $level->trial_amount <= 0 ) {
 		$r = true;
@@ -3568,6 +3598,46 @@ function pmpro_is_checkout() {
 	$is_checkout = apply_filters( 'pmpro_is_checkout', $is_checkout );
 
 	return $is_checkout;
+}
+
+/**
+ * Are we on the PMPro checkout page?
+ * @since TBD
+ * @return bool True if we are on the checkout page, false otherwise
+ */
+function pmpro_is_cancel() {
+	global $pmpro_pages;
+
+	// Try is_page first.
+	if ( ! empty( $pmpro_pages['cancel'] ) ) {
+		$is_cancel = is_page( $pmpro_pages['cancel'] );
+	} else {
+		$is_cancel = false;
+	}
+
+	// Page might not be setup yet or a custom page.
+	$queried_object = get_queried_object();
+
+	if ( ! $is_cancel &&
+	     ! empty( $queried_object ) &&
+	     ! empty( $queried_object->post_content ) &&
+	     ( has_shortcode( $queried_object->post_content, 'pmpro_cancel' ) ||
+	       ( function_exists( 'has_block' ) &&
+	         has_block( 'pmpro/cancel-page', $queried_object->post_content )
+	       )
+	     )
+	) {
+		$is_cancel = true;
+	}
+
+	/**
+	 * Filter for pmpro_is_cancel return value.
+	 * @since TBD
+	 * @param bool $is_cancel true if we are on the cancel page, false otherwise
+	 */
+	$is_cancel = apply_filters( 'pmpro_is_cancel', $is_cancel );
+
+	return $is_cancel;
 }
 
 /**
