@@ -4249,15 +4249,7 @@ function pmpro_refund_order( $order, $refund_amt = 0.00 ){
 		// AFTER REFUND ACTIONS. amt = 0 means 100%.
 		$refund_amt = $refund_amt ?: $order->total;
 
-		error_log( "[$order->code] Now refunding amount: $refund_amt" );
-
-		$total_refunded = get_pmpro_membership_order_meta( $order->id, 'refunded_amt', true );
-		$total_refunded = floatval( $total_refunded );
-		error_log( "[$order->code] Already refunded: $total_refunded" );
-
-		$total_refunded += $refund_amt;
-		error_log( "[$order->code] Total refunded: $total_refunded" );
-		update_pmpro_membership_order_meta( $order->id, 'refunded_amt', $total_refunded );
+		$total_refunded = pmpro_refund_order_update_meta( $order, $refund_amt );
 
 		// conditionally update the order status to "refunded".
 		if ( floatval( $order->total ) === $total_refunded ) {
@@ -4267,6 +4259,28 @@ function pmpro_refund_order( $order, $refund_amt = 0.00 ){
     
 	return $success;
 
+}
+
+/**
+ * Update the order meta with the total refunded amount
+ *
+ * @param object $order Member Order that we are refunding
+ * @param float $refund_amt The amount we want to refund
+ *
+ * @return float The amount we have refunded (total)
+ */
+function pmpro_update_refunded_order_meta( $order, $refund_amt ) {
+	error_log( "[$order->code] Now refunding amount: $refund_amt" );
+
+	$total_refunded = get_pmpro_membership_order_meta( $order->id, 'refunded_amt', true );
+	$total_refunded = floatval( $total_refunded );
+	error_log( "[$order->code] Already refunded: $total_refunded" );
+
+	$total_refunded += $refund_amt;
+	error_log( "[$order->code] Total refunded: $total_refunded" );
+	update_pmpro_membership_order_meta( $order->id, 'refunded_amt', $total_refunded );
+
+	return $total_refunded;
 }
 
 /**
