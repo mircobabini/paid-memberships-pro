@@ -194,7 +194,7 @@ class PMProGateway_stripe extends PMProGateway {
 		add_action( 'admin_notices', array( 'PMProGateway_stripe', 'stripe_connect_show_errors' ) );
 		add_action( 'admin_notices', array( 'PMProGateway_stripe', 'stripe_connect_deauthorize' ) );
 
-		add_filter( 'pmpro_process_refund_stripe', array( 'PMProGateway_stripe', 'process_refund' ), 10, 2 );
+		add_filter( 'pmpro_process_refund_stripe', array( 'PMProGateway_stripe', 'process_refund' ), 10, 3 );
 	}
 
 	/**
@@ -4749,11 +4749,12 @@ class PMProGateway_stripe extends PMProGateway {
 	 *
 	 * @param bool    $success Status of the refund (default: false)
 	 * @param object  $order The Member Order Object
+	 * @param float   $refund_amt The amount we want to refund.
 	 * @since 2.8
 	 * 
 	 * @return bool   Status of the processed refund
 	 */
-	public static function process_refund( $success, $order ) {
+	public static function process_refund( $success, $order, $refund_amt ) {
 
 		//default to using the payment id from the order
 		if ( !empty( $order->payment_transaction_id ) ) {
@@ -4791,14 +4792,18 @@ class PMProGateway_stripe extends PMProGateway {
 			} 
 
 			$client = new Stripe_Client( $secretkey );
-			$refund = $client->refunds->create( [
-				'charge' => $transaction_id,
-			] );			
+
+			$refund_args = [ 'charge' => $transaction_id ];
+
+			if ( ! empty( $refund_amt ) ) {
+				// https://stripe.com/docs/api/refunds/create?lang=php
+				$refund_args['amount'] = intval( $refund_amt * 100 ); // in cents
+			}
+
+			$refund = $client->refunds->create( $refund_args );			
 
 			//Make sure we're refunding an order that was successful
 			if ( $refund->status != 'failed' ) {
-				$order->status = 'refunded';	
-
 				$success = true;
 			
 				global $current_user;

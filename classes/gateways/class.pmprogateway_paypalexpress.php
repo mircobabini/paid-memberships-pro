@@ -71,7 +71,7 @@
 				add_filter('pmpro_checkout_default_submit_button', array('PMProGateway_paypalexpress', 'pmpro_checkout_default_submit_button'));
 				add_action('http_api_curl', array('PMProGateway_paypalexpress', 'http_api_curl'), 10, 3);
 			}
-			add_filter( 'pmpro_process_refund_paypalexpress', array('PMProGateway_paypalexpress', 'process_refund' ), 10, 2 );
+			add_filter( 'pmpro_process_refund_paypalexpress', array('PMProGateway_paypalexpress', 'process_refund' ), 10, 3 );
 		}
 
 		/**
@@ -1090,11 +1090,12 @@
 		 *
 		 * @param bool    $succes Status of the refund (default: false)
 		 * @param object  $morder The Member Order Object
+		 * @param float   $refund_amt The amount we want to refund.
 		 * @since 2.8
 		 * 
 		 * @return bool   Status of the processed refund
 		 */
-		public static function process_refund( $success, $morder ){
+		public static function process_refund( $success, $morder, $refund_amt ){
 
 			//need a transaction id
 			if ( empty( $morder->payment_transaction_id ) ) {
@@ -1108,13 +1109,19 @@
 				$transaction_id = $morder->Gateway->getRealPaymentTransactionId( $morder );
 			}
 
-			$httpParsedResponseAr = $morder->Gateway->PPHttpPost( 'RefundTransaction', '&TRANSACTIONID='.$transaction_id );		
+
+			$nvp_query = "&TRANSACTIONID=$transaction_id";
+			if ( ! empty( $refund_amt ) ) {
+				// https://developer.paypal.com/api/nvp-soap/refund-transaction-nvp/
+				$refund_amt = round( $refund_amt, 2 );
+				$nvp_query  .= "&REFUNDTYPE=Partial&AMT=$refund_amt";
+			}
+
+			$httpParsedResponseAr = $morder->Gateway->PPHttpPost( 'RefundTransaction', $nvp_query );
 
 			if ( 'success' === strtolower( $httpParsedResponseAr['ACK'] ) ) {
 				
 				$success = true;
-
-				$morder->status = 'refunded';
 
 				global $current_user;
 

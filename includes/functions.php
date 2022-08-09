@@ -4220,9 +4220,10 @@ function pmpro_allowed_refunds( $order ) {
 /**
  * Decides which filter should be used for the refund depending on gateway
  * @param  object $order Member Order that we are refunding
+ * @param  float $refund_amt The amount we want to refund
  * @return bool 	Returns a bool value based on if a refund was processed successfully or not
  */
-function pmpro_refund_order( $order ){
+function pmpro_refund_order( $order, $refund_amt = 0.00 ){
 
 	if( empty( $order ) ){
 		return false;
@@ -4240,9 +4241,30 @@ function pmpro_refund_order( $order ){
 	 *
 	 * @param bool $success Default return value is false to determine if the refund was successfully processed. 
 	 * @param object $order The Member Order we want to refund.
+	 * @param float $refund_amt The amount we want to refund.
 	 */
-	$success = apply_filters( 'pmpro_process_refund_'.$order->gateway, false, $order );
-	
+	$success = apply_filters( 'pmpro_process_refund_'.$order->gateway, false, $order, $refund_amt );
+
+	if ( $success ) {
+		// AFTER REFUND ACTIONS. amt = 0 means 100%.
+		$refund_amt = $refund_amt ?: $order->total;
+
+		error_log( "[$order->code] Now refunding amount: $refund_amt" );
+
+		$total_refunded = get_pmpro_membership_order_meta( $order->id, 'refunded_amt', true );
+		$total_refunded = floatval( $total_refunded );
+		error_log( "[$order->code] Already refunded: $total_refunded" );
+
+		$total_refunded += $refund_amt;
+		error_log( "[$order->code] Total refunded: $total_refunded" );
+		update_pmpro_membership_order_meta( $order->id, 'refunded_amt', $total_refunded );
+
+		// conditionally update the order status to "refunded".
+		if ( floatval( $order->total ) === $total_refunded ) {
+			$order->updateStatus( 'refunded' );
+		}
+	}
+    
 	return $success;
 
 }
