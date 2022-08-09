@@ -413,9 +413,17 @@ if ( strtolower( $payment_status ) === 'refunded' ) {
 		}
 		
 		// Handle partial refunds. Only updating the log and notes for now.
-		if ( abs( (float)$_POST['mc_gross'] ) < (float)$morder->total ) {				
-			ipnlog( sprintf( 'IPN: Order was partially refunded on %1$s for transaction ID %2$s at the gateway. The order will need to be updated in the WP dashboard.', date_i18n('Y-m-d H:i:s'), $payment_transaction_id ) );
-			$morder->notes = trim( $morder->notes . ' ' . sprintf( 'IPN: Order was partially refunded on %1$s for transaction ID %2$s at the gateway. The order will need to be updated in the WP dashboard.', date_i18n('Y-m-d H:i:s'), $payment_transaction_id ) );
+		$refund_amt = abs( (float)$_POST['mc_gross'] );
+		if ( $refund_amt < (float)$morder->total ) {		
+			$last_txn_refund_processed = get_pmpro_membership_order_meta( $morder->id, 'last_txn_refund_processed', true );
+			if( $last_txn_refund_processed === $txn_id ){
+				$logstr .= sprintf( 'IPN: Order ID %1$s partial refund request with transaction ID %2$s was already processed.', $morder->id, $txn_id );
+				pmpro_ipnExit();
+			}
+
+			pmpro_update_refunded_order_meta( $morder, $refund_amt );
+			ipnlog( sprintf( 'IPN: Order was partially refunded on %1$s for transaction ID %2$s at the gateway. Updated the WP Dashboard accordingly.', date_i18n('Y-m-d H:i:s'), $payment_transaction_id ) );
+			$morder->notes = trim( $morder->notes . ' ' . sprintf( 'IPN: Order was partially refunded on %1$s for transaction ID %2$s at the gateway. Updated the WP Dashboard accordingly.', date_i18n('Y-m-d H:i:s'), $payment_transaction_id ) );
 			$morder->SaveOrder();
 			pmpro_ipnExit();
 		}

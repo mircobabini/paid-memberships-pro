@@ -1128,6 +1128,8 @@
 				// translators: %1$s is the Transaction ID. %2$s is the user display name that initiated the refund.
 				$morder->notes = trim( $morder->notes . ' ' . sprintf( __('Admin: Order successfully refunded on %1$s for transaction ID %2$s by %3$s.', 'paid-memberships-pro' ), date_i18n('Y-m-d H:i:s'), $transaction_id, $current_user->display_name ) );
 
+				update_pmpro_membership_order_meta( $morder->id, 'last_txn_refund_processed', $httpParsedResponseAr['REFUNDTRANSACTIONID'] );
+
 				$user = get_user_by( 'id', $morder->user_id );
 				//send an email to the member
 				$myemail = new PMProEmail();
