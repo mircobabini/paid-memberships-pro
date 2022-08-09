@@ -4249,7 +4249,7 @@ function pmpro_refund_order( $order, $refund_amt = 0.00 ){
 		// AFTER REFUND ACTIONS. amt = 0 means 100%.
 		$refund_amt = $refund_amt ?: $order->total;
 
-		$total_refunded = pmpro_refund_order_update_meta( $order, $refund_amt );
+		$total_refunded = pmpro_update_refunded_order_meta( $order, $refund_amt );
 
 		// conditionally update the order status to "refunded".
 		if ( floatval( $order->total ) === $total_refunded ) {
