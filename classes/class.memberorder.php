@@ -80,7 +80,7 @@
 		 *
 		 * @var float
 		 */
-		private $tax = null;
+		private $tax = 0.00;
 
 		/**
 		 * Discount Code Amount
@@ -222,7 +222,7 @@
 		private $timestamp = '';
 
 		/**
-		 * The Affiliate ID 
+		 * The Affiliate ID
 		 *
 		 * @since 2.9
 		 *
@@ -255,7 +255,7 @@
 		 *
 		 * @var string
 		 */
-		private $checkout_id = '';	
+		private $checkout_id = '';
 
 		/**
 		 * Defines an array of optionally used properties
@@ -264,7 +264,7 @@
 		 *
 		 * @var array
 		 */
-		private $other_properties = array();	
+		private $other_properties = array();
 
 
 		/**
@@ -301,12 +301,12 @@
 
 			return $morder;
 		}
-		
+
 		/**
 		 * Get Magic Method
 		 *
 		 * @since 2.9
-		 * 
+		 *
 		 * @param string $property The property we want to get
 		 *
 		 * @return mixed|void
@@ -331,7 +331,7 @@
 		 * Set Magic Method
 		 *
 		 * @since 2.9
-		 * 
+		 *
 		 * @param string $property The property we want to reference
 		 * @param string $value The value we want to set for $property
 		 *
@@ -344,14 +344,14 @@
 			}
 
 			if ( property_exists( $this, $property ) ) {
-				
+
 				// Perform validation as needed here.
 				if ( is_int( $this->{$property} ) ) {
 					$value = (int) $value;
 				} elseif ( is_float( $this->{$property} ) ) {
 					$value = (float) $value;
 				}
-				
+
 				$this->{$property} = $value;
 
 			} else {
@@ -366,7 +366,7 @@
 		 * Is Set Magic Method
 		 *
 		 * @since 2.9
-		 * 
+		 *
 		 * @param string $property The property we want to reference
 		 *
 		 * @return bool
@@ -374,14 +374,14 @@
 		public function __isset( $property ) {
 
 			return property_exists( $this, $property ) || isset( $this->other_properties[ $property ] );
-	
+
 		}
 
 		/**
 		 * Unset Magic Method.
 		 *
 		 * @since 2.9.1
-		 * 
+		 *
 		 * @param string $property The property we want to unset.
 		 */
 		public function __unset( $property ) {
@@ -391,12 +391,12 @@
 				unset( $this->other_properties[ $property ] );
 			}
 		}
-		
+
 		/**
 		 * Get a specific order by ID, code, or an array of arguments
 		 *
 		 * @since 2.9
-		 * 
+		 *
 		 * @param mixed $args Specify an order ID, code, or array of arguments to find an order for.
 		 *
 		 */
@@ -445,7 +445,7 @@
 		 * Get orders based on various parameters
 		 *
 		 * @since 2.9
-		 * 
+		 *
 		 * @param array $args Specify what you'd like to filter the query by
 		 *
 		 */
@@ -627,10 +627,10 @@
 			$order->code = $this->getRandomCode();
 			$order->user_id = "";
 			$order->membership_id = "";
-			$order->subtotal = "";
-			$order->tax = "";
+			$order->subtotal = 0.00;
+			$order->tax = 0.00;
 			$order->couponamount = "";
-			$order->total = "";
+			$order->total = 0.00;
 			$order->payment_type = "";
 			$order->cardtype = "";
 			$order->accountnumber = "";
@@ -705,7 +705,7 @@
 				$this->Email = $wpdb->get_var( $wpdb->prepare( "SELECT user_email FROM $wpdb->users WHERE ID = %d LIMIT 1", $this->user_id ) );
 
 				$this->subtotal = $dbobj->subtotal;
-				$this->tax = $dbobj->tax;
+				$this->tax = (float)$dbobj->tax;
 				$this->couponamount = $dbobj->couponamount;
 				$this->certificate_id = $dbobj->certificate_id;
 				$this->certificateamount = $dbobj->certificateamount;
@@ -750,17 +750,17 @@
 		 */
 		function get_original_subscription_order( $subscription_id = '' ){
 			global $wpdb;
-			
+
 			// Default to use the subscription ID on this order object.
 			if ( empty( $subscription_id ) && ! empty( $this->subscription_transaction_id ) ) {
 				$subscription_id = $this->subscription_transaction_id;
 			}
-			
+
 			// Must have a subscription ID.
 			if ( empty( $subscription_id ) ) {
 				return false;
 			}
-			
+
 			// Get some other values from this order to narrow the search.
 			if ( ! empty( $this->user_id ) ) {
 				$user_id = $this->user_id;
@@ -777,7 +777,7 @@
 			} else {
 				$gateway_environment = '';
 			}
-			
+
 			// Double check for a user_id, gateway and gateway environment.
 			$sql = $wpdb->prepare(
 				"SELECT ID
@@ -795,7 +795,7 @@
 					 $gateway_environment
 				 )
 			 );
-			
+
 			$order_id = $wpdb->get_var( $sql );
 			if ( ! empty( $order_id ) ) {
 				return new MemberOrder( $order_id );
@@ -810,25 +810,25 @@
 		 * a previous paid (non-$0) order.
 		 */
 		function is_renewal() {
-			global $wpdb;			
-			
+			global $wpdb;
+
 			// If our property is already set, use that.
-			if ( isset( $this->is_renewal ) ) {				
+			if ( isset( $this->is_renewal ) ) {
 				return $this->is_renewal;
 			}
-			
+
 			// Can't tell if this is a renewal without a user.
 			if ( empty( $this->user_id ) ) {
 				$this->is_renewal = false;
 				return $this->is_renewal;
 			}
-			
+
 			// Can't tell if this is a renewal without a timestamp.
 			if ( empty( $this->timestamp ) ) {
 				$this->is_renewal = false;
 				return $this->is_renewal;
 			}
-			
+
 			// Check the DB.
 			$sqlQuery = "SELECT `id`
 						 FROM $wpdb->pmpro_membership_orders
@@ -847,7 +847,7 @@
 			} else {
 				$this->is_renewal = false;
 			}
-			
+
 			return $this->is_renewal;
 		}
 
@@ -1070,10 +1070,10 @@
 			if(!empty($this->user))
 				return $this->user;
 
-			
+
 			$this->user = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $wpdb->users WHERE ID = %d LIMIT 1", $this->user_id ) );
-			
-			// Fix the timestamp for local time 
+
+			// Fix the timestamp for local time
 			if ( ! empty( $this->user ) && ! empty( $this->user->user_registered ) ) {
 				$this->user->user_registered = strtotime( get_date_from_gmt( $this->user->user_registered, 'Y-m-d H:i:s' ) );
 			}
@@ -1123,7 +1123,7 @@
 			{
 				$this->membership_level = $wpdb->get_row( $wpdb->prepare( "SELECT l.* FROM $wpdb->pmpro_membership_levels l WHERE l.id = %d LIMIT 1", $this->membership_id ) );
 			}
-			
+
 			// Round prices to avoid extra decimals.
 			if( ! empty( $this->membership_level ) ) {
 				$this->membership_level->initial_payment = pmpro_round_price( $this->membership_level->initial_payment );
@@ -1133,7 +1133,7 @@
 
 			return $this->membership_level;
 		}
-		
+
 		/**
 		 * Get a membership level object at checkout
 		 * for the level associated with this order.
@@ -1148,27 +1148,27 @@
 			if( ! empty( $this->membership_level ) && empty( $force ) ) {
 				return $this->membership_level;
 			}
-			
+
 			// If for some reason, we haven't setup pmpro_level yet, do that.
 			if ( empty( $pmpro_level ) ) {
 				$pmpro_level = pmpro_getLevelAtCheckout();
 			}
-			
+
 			// Set the level to the checkout level global.
 			$this->membership_level = $pmpro_level;
-			
+
 			// Fix the membership level id.
 			if(!empty( $this->membership_level) && !empty($this->membership_level->level_id)) {
 				$this->membership_level->id = $this->membership_level->level_id;
 			}
-			
+
 			// Round prices to avoid extra decimals.
 			if( ! empty( $this->membership_level ) ) {
 				$this->membership_level->initial_payment = pmpro_round_price( $this->membership_level->initial_payment );
 				$this->membership_level->billing_amount = pmpro_round_price( $this->membership_level->billing_amount );
 				$this->membership_level->trial_amount = pmpro_round_price( $this->membership_level->trial_amount );
 			}
-			
+
 			return $this->membership_level;
 		}
 
@@ -1182,7 +1182,7 @@
 			$tax_rate = get_option("pmpro_tax_rate");
 
 			//default
-			$tax = 0;
+			$tax = 0.00;
 
 			//calculate tax
 			if($tax_state && $tax_rate)
@@ -1209,7 +1209,7 @@
 				$values['billing_country'] = $this->billing->country;
 
 			//filter
-			$tax = apply_filters("pmpro_tax", $tax, $values, $this);
+			$tax = (float)apply_filters("pmpro_tax", $tax, $values, $this);
 			return $tax;
 		}
 
@@ -1265,7 +1265,7 @@
 			if($wpdb->query($this->sqlQuery) !== "false") {
 				$this->timestamp = strtotime( $date );
 				do_action('pmpro_updated_order', $this);
-				
+
 				return $this->getMemberOrderByID($this->id);
 			} else {
 				return false;
@@ -1294,10 +1294,10 @@
 			//Todo: Tax?!, Coupons, Certificates, affiliates
 			if(empty($this->subtotal))
 				$this->subtotal = $amount;
-			if(isset($this->tax))
-				$tax = $this->tax;
-			else
+			if(empty($this->tax))
 				$tax = $this->getTax(true);
+			else
+				$tax = $this->tax;
 			$this->certificate_id = "";
 			$this->certificateamount = "";
 
